@@ -1,0 +1,7 @@
+.vscode
+
+const.go
+cmd.md
+
+*.bin
+*.exe
