@@ -21,9 +21,13 @@ func httpHandler(trueHost string) func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		for k, v := range r.Header {
+			req.Header.Set(k, v[0])
+		}
 		if COOKIE != "" {
 			req.Header.Set("Cookie", COOKIE)
 		}
+		req.Header.Set("Referer", HOST)
 
 		resp, err := Client.Do(req)
 		if err != nil {
