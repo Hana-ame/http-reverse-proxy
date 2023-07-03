@@ -81,7 +81,7 @@ func main() {
 	var laddr = flag.String("l", "127.0.0.1:8080", "listen address")
 	var saddr = flag.String("s", HOST, "server address")
 	var cookie = flag.String("cookie", COOKIE, "cookie")
-	var dualStack = flag.Bool("-dual-stack", false, "Forces IPv4 only when not set this flag")
+	var dualStack = flag.Bool("dual-stack", false, "Forces IPv4 only when not set this flag")
 	// var reExp = flag.String("r", ".*", "regex to match")
 	flag.Parse()
 
