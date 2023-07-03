@@ -10,9 +10,13 @@ import (
 )
 
 var Client *http.Client
+var channel = make(chan struct{}, 5)
 
 func httpHandler(trueHost, cookie string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		channel <- struct{}{}
+		defer func() { <-channel }()
+
 		newUrl := r.URL
 		newUrl.Host = trueHost
 		newUrl.Scheme = "https"
