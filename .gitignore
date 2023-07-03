@@ -4,4 +4,5 @@ const.go
 cmd.md
 
 *.bin
+*.out
 *.exe
