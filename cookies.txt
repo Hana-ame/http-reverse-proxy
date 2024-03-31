@@ -1,0 +1,8 @@
+# Netscape HTTP Cookie File
+# http://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file!  Do not edit.
+
+www.google.com	FALSE	/recaptcha	TRUE	1727415492	_GRECAPTCHA	09AH4jZCTaKBjTagStRmKibni20DZlIL4B2YWciP6Ro-Xsco7CVl2gGc1zN9u8nY62pqsfvd3O7mySHrDlrVBB1sk
+.google.com	TRUE	/verify	TRUE	1727674683	SNID	AOYECSp3cNdt5mP_rZeB-t9gu1sq_mvZP4f-eqMj4_MNIDO2cx4riJuC_-dLVwnYDp5gdWHMh4pJOO48J18NKllU8e2Ujm1j1Ko
+.scholar.google.com	TRUE	/	TRUE	1746423545	GSP	A=lotDjg:CPTS=1711863545:LM=1711863545:S=p6Frdwk-YRP_bb2H
+.google.com	TRUE	/	TRUE	1727674747	NID	512=NvRnZoLDV7eB0luZ1jir6zkH7m-1UmUjLZPbyLbwQc9feOG8f3YW_btbueCNt92EErS56l5BaYTWGVlBpxQrIv0R-yN4IA-dH2BjK4uPYv9XJJ6Lr9C83MElbXcQLQgDADSwXpWK5nYm_2uS9Ne1xrsm7oKEQBOp44IqfOU7Jx0
