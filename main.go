@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/ssgelm/cookiejarparser"
@@ -70,16 +73,51 @@ func InitCoolieJar() http.CookieJar {
 	return cookies
 }
 
-func InitClient(dualStack bool) {
-	log.Printf("[log]init client with dualStack:%v\n", dualStack)
+// generateRandomNumber generates a random integer between min and max (inclusive)
+func generateRandomNumber(min, max int) int {
+	return rand.Intn(max-min+1) + min
+}
+
+var list = []string{
+	"2001:470:c:6c::2",
+	"2001:470:c:6c::3",
+	"2001:470:c:6c::4",
+	"2001:470:c:6c::5",
+}
+
+func randomLocalAddr() *net.TCPAddr {
+	randomNumber := generateRandomNumber(0, 3)
+	ipString := list[randomNumber]
+	addr, _ := net.ResolveTCPAddr("tcp6", ipString)
+	return addr
+}
+
+func InitClient(ipv4 bool, ipv6 bool) {
+	log.Printf("[log]init client with dualStack:%v\n", ipv4)
 
 	var client *http.Client = func() *http.Client {
 		tr := &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout:   5 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: dualStack, // Forces IPv4 only when set to `false`
-			}).Dial,
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				// 只允许IPv6连接，但是没用
+				if network == "tcp" {
+					network = "tcp6"
+				}
+				return (&net.Dialer{
+					Timeout:   5 * time.Second,
+					KeepAlive: 30 * time.Second,
+					LocalAddr: randomLocalAddr(),
+					Resolver: &net.Resolver{
+						PreferGo: true,
+						Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+							d := net.Dialer{
+								Timeout: 5 * time.Second,
+							}
+							// 使用Google的IPv6 DNS服务器
+							return d.DialContext(ctx, "udp6", "1.1.1.1:53")
+						},
+					},
+				}).DialContext(ctx, network, addr)
+			},
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		return &http.Client{
@@ -95,12 +133,13 @@ func InitClient(dualStack bool) {
 }
 
 func main() {
-	var laddr = flag.String("l", "127.0.0.1:8080", "listen address")
-	var saddr = flag.String("s", HOST, "server address")
-	var dualStack = flag.Bool("dual-stack", false, "Forces IPv4 only when not set this flag")
+	var laddr = flag.String("l", os.Getenv("HTTP_PROXY_LOCAL"), "listen address")
+	var saddr = flag.String("s", os.Getenv("HTTP_PROXY_HOST"), "server address")
+	// var ipv4 = flag.Bool("4", true, "use ipv4")
+	var ipv6 = flag.Bool("6", false, "use ipv6")
 	flag.Parse()
 
-	InitClient(*dualStack)
+	InitClient(*ipv6, *ipv6)
 
 	handler := http.NewServeMux()
 	handler.HandleFunc("/", httpHandler(*saddr))
