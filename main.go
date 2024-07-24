@@ -1,17 +1,19 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
-	"os"
-	"time"
+	"net/http/cookiejar"
 
+	"os"
+
+	_ "github.com/joho/godotenv/autoload"
+
+	myclient "github.com/Hana-ame/http-reverse-proxy/my_client"
 	"github.com/ssgelm/cookiejarparser"
 )
 
@@ -24,7 +26,7 @@ func httpHandler(trueHost string) func(w http.ResponseWriter, r *http.Request) {
 		newUrl.Scheme = "https"
 
 		// make request
-		req, err := http.NewRequest("GET", newUrl.String(), r.Body)
+		req, err := http.NewRequest(http.MethodGet, newUrl.String(), r.Body)
 		if err != nil {
 			log.Println(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -37,7 +39,7 @@ func httpHandler(trueHost string) func(w http.ResponseWriter, r *http.Request) {
 		req.Header.Set("Referer", trueHost)
 
 		// do request
-		resp, err := Client.Do(req)
+		resp, err := client().Do(req)
 		if err != nil {
 			log.Println(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -49,7 +51,7 @@ func httpHandler(trueHost string) func(w http.ResponseWriter, r *http.Request) {
 		statusCode := resp.StatusCode
 		for k, v := range resp.Header {
 			for _, vv := range v {
-				w.Header().Set(k, vv)
+				w.Header().Add(k, vv)
 			}
 		}
 
@@ -65,71 +67,34 @@ func httpHandler(trueHost string) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func InitCoolieJar() http.CookieJar {
-	cookies, err := cookiejarparser.LoadCookieJarFile("cookies.txt")
+// cookie
+var defaultJar http.CookieJar
+
+func initCoolieJar() http.CookieJar {
+	jar, err := cookiejarparser.LoadCookieJarFile("cookies.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return cookies
+	// defaultJar = jar
+	return jar
 }
 
-// generateRandomNumber generates a random integer between min and max (inclusive)
-func generateRandomNumber(min, max int) int {
-	return rand.Intn(max-min+1) + min
+// clients
+var defaultPool *myclient.ClientPool = myclient.NewClientPool()
+
+func initIPv6Clients() *myclient.ClientPool {
+	pool := myclient.NewClientPool()
+	for _, ipv6addr := range openfile() {
+		ip := net.ParseIP(ipv6addr)
+		client := myclient.NewClient(ip, defaultJar.(*cookiejar.Jar))
+		pool.Add(client)
+	}
+	// defaultPool = pool
+	return pool
 }
 
-var list = []string{
-	"2001:470:c:6c::2",
-	"2001:470:c:6c::3",
-	"2001:470:c:6c::4",
-	"2001:470:c:6c::5",
-}
-
-func randomLocalAddr() *net.TCPAddr {
-	randomNumber := generateRandomNumber(0, 3)
-	ipString := list[randomNumber]
-	addr, _ := net.ResolveTCPAddr("tcp6", ipString)
-	return addr
-}
-
-func InitClient(ipv4 bool, ipv6 bool) {
-	log.Printf("[log]init client with dualStack:%v\n", ipv4)
-
-	var client *http.Client = func() *http.Client {
-		tr := &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				// 只允许IPv6连接，但是没用
-				if network == "tcp" {
-					network = "tcp6"
-				}
-				return (&net.Dialer{
-					Timeout:   5 * time.Second,
-					KeepAlive: 30 * time.Second,
-					LocalAddr: randomLocalAddr(),
-					Resolver: &net.Resolver{
-						PreferGo: true,
-						Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-							d := net.Dialer{
-								Timeout: 5 * time.Second,
-							}
-							// 使用Google的IPv6 DNS服务器
-							return d.DialContext(ctx, "udp6", "1.1.1.1:53")
-						},
-					},
-				}).DialContext(ctx, network, addr)
-			},
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		return &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-			Transport: tr,
-			Jar:       InitCoolieJar(),
-		}
-	}()
-
-	Client = client
+func client() *http.Client {
+	return defaultPool.Get()
 }
 
 func main() {
@@ -139,11 +104,16 @@ func main() {
 	var ipv6 = flag.Bool("6", false, "use ipv6")
 	flag.Parse()
 
-	InitClient(*ipv6, *ipv6)
+	defaultJar = initCoolieJar()
+	if *ipv6 {
+		defaultPool = initIPv6Clients()
+	}
 
 	handler := http.NewServeMux()
 	handler.HandleFunc("/", httpHandler(*saddr))
 	server := &http.Server{Addr: *laddr, Handler: handler}
+
+	fmt.Printf("listen on %v, server is %v \n", *laddr, *saddr)
 
 	err := server.ListenAndServe()
 	log.Println(err)

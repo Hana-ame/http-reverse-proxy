@@ -65,11 +65,9 @@ func Delete(IPv6Addr string) error {
 func List() []string {
 	mu.Lock()
 	defer mu.Unlock()
-	ipList := make([]string, len(ips))
-	i := 0
+	ipList := make([]string, 0, len(ips))
 	for k := range ips {
-		ipList[i] = k
-		i++
+		ipList = append(ipList, k)
 	}
 	return ipList
 }

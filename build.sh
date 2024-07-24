@@ -1,6 +1,6 @@
 #!/bin/bash
 
-go build
+# go build
 
 export GOOS=linux
 export GOARCH=amd64

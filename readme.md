@@ -1,1 +1,1 @@
-还没commit的部分是因为懒得rebuild再push上去run所以留着。
+程序写的很成功，但是ip段被google封了。
