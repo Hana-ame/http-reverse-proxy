@@ -30,13 +30,14 @@ import (
 var ips = make(map[string]struct{})
 var mu sync.Mutex
 
+// cmd := exec.Command("ifconfig", "sit1", "inet6", "add", IPv6Addr+"/64") // command and arguments
 func Add(IPv6Addr string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
 	cmd := exec.Command("ifconfig", "sit1", "inet6", "add", IPv6Addr+"/64") // command and arguments
 	output, err := cmd.Output()
-	// log.Println("add addr " + IPv6Addr + " :" + string(output))
+	// log.Println("add addr " + IPv6Addr + " :" + string(output)) // for debugging
 	_ = output
 
 	if err != nil {
@@ -46,13 +47,14 @@ func Add(IPv6Addr string) error {
 	return err
 }
 
+// cmd := exec.Command("ifconfig", "sit1", "inet6", "del", IPv6Addr+"/64") // command and arguments
 func Delete(IPv6Addr string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
 	cmd := exec.Command("ifconfig", "sit1", "inet6", "del", IPv6Addr+"/64") // command and arguments
 	output, err := cmd.Output()
-	// log.Println("del addr " + IPv6Addr + " :" + string(output))
+	// log.Println("del addr " + IPv6Addr + " :" + string(output)) // for debugging
 	_ = output
 
 	if err != nil {
@@ -67,7 +69,7 @@ func List() []string {
 	defer mu.Unlock()
 	ipList := make([]string, 0, len(ips))
 	for k := range ips {
-		ipList = append(ipList, k)
+		ipList = append(ipList, k) // even the official packages implemented in this way as well.
 	}
 	return ipList
 }
